@@ -1,0 +1,17 @@
+
+> lojacomapp@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.7:3000
+- Environments: .env.local
+✓ Ready in 1032ms
+Creating turbopack project { dir: 'C:\\Users\\couea\\lojacomapp', testMode: true }
+
+ GET / 200 in 829ms (next.js: 127ms, proxy.ts: 270ms, application-code: 432ms)
+ GET /login 200 in 844ms (next.js: 320ms, proxy.ts: 268ms, application-code: 256ms)
+○ Compiling /[slug] ...
+ GET /figurinhas 404 in 8.1s (next.js: 6.1s, proxy.ts: 158ms, application-code: 1889ms)
+ GET /manifest/lojacomapp.webmanifest 200 in 171ms (next.js: 130ms, proxy.ts: 8ms, application-code: 34ms)
+ GET /figurinhas 404 in 428ms (next.js: 21ms, proxy.ts: 13ms, application-code: 394ms)
