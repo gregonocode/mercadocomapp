@@ -1,10 +1,8 @@
-const CACHE_NAME = 'mercadocomapp-system-v1';
+const CACHE_NAME = 'mercadocomapp-system-v2';
 const CORE_ASSETS = [
   '/offline.html',
-  '/icon/icon-192.png',
-  '/icon/icon-512.png',
-  '/icon/icon-maskable-192.png',
-  '/icon/icon-maskable-512.png',
+  '/icon/icon-mercado-192.png',
+  '/icon/icon-mercado-512.png',
   '/manifest/lojacomapp.webmanifest',
 ];
 

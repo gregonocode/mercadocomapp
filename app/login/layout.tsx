@@ -4,7 +4,7 @@ import { SystemPwaRegistrar } from '@/app/components/system-pwa-registrar';
 import { systemPwa } from '@/app/lib/pwa/manifests';
 
 export const metadata: Metadata = {
-  title: 'Entrar | Loja com app',
+  title: 'Entrar | Mercado com app',
   description: systemPwa.description,
   manifest: '/manifest/lojacomapp.webmanifest',
   appleWebApp: {

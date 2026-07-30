@@ -7,6 +7,7 @@ import {
   ArrowUpOnSquareIcon,
   BellAlertIcon,
   ClipboardDocumentIcon,
+  EllipsisVerticalIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { systemPwa } from '@/app/lib/pwa/manifests';
@@ -18,8 +19,6 @@ type BeforeInstallPromptEvent = Event & {
     platform: string;
   }>;
 };
-
-const DISMISSED_STORAGE_KEY = 'lojacomapp-pwa-install-dismissed';
 
 function isStandaloneMode() {
   if (typeof window === 'undefined') {
@@ -76,9 +75,7 @@ export function PwaInstallPrompt() {
     const frame = window.requestAnimationFrame(() => {
       setPlatform(getPlatform());
       setIsStandalone(isStandaloneMode());
-      setIsDismissed(
-        window.sessionStorage.getItem(DISMISSED_STORAGE_KEY) === 'true',
-      );
+      setIsDismissed(false);
     });
 
     function handleDisplayModeChange() {
@@ -111,7 +108,6 @@ export function PwaInstallPrompt() {
   }, []);
 
   function dismissPrompt() {
-    window.sessionStorage.setItem(DISMISSED_STORAGE_KEY, 'true');
     setIsDismissed(true);
   }
 
@@ -123,8 +119,12 @@ export function PwaInstallPrompt() {
     try {
       setIsInstalling(true);
       await deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
+      const choice = await deferredPrompt.userChoice;
       setDeferredPrompt(null);
+
+      if (choice.outcome === 'dismissed') {
+        setIsDismissed(true);
+      }
     } finally {
       setIsInstalling(false);
     }
@@ -154,7 +154,7 @@ export function PwaInstallPrompt() {
   const showAndroidInstall = platform.isAndroid && Boolean(deferredPrompt);
   const showIosGuide = platform.isIos;
 
-  if (!showAndroidInstall && !showIosGuide) {
+  if (!platform.isAndroid && !showIosGuide) {
     return null;
   }
 
@@ -164,19 +164,19 @@ export function PwaInstallPrompt() {
         <div className="bg-[radial-gradient(circle_at_50%_0%,rgba(192,132,252,0.95),rgba(126,34,206,0.75)_36%,rgba(24,24,27,1)_100%)] px-5 py-4 text-white">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="relative h-14 w-14 flex-none overflow-hidden rounded-2xl bg-white p-2 shadow-sm">
+              <div className="relative h-14 w-14 flex-none overflow-hidden rounded-2xl shadow-sm">
                 <Image
                   src={systemPwa.icons.icon192}
                   alt={systemPwa.shortName}
                   fill
                   sizes="56px"
-                  className="object-contain p-2"
+                  className="object-cover"
                 />
               </div>
 
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-white/60">
-                  App do lojista
+                  App do mercado
                 </p>
                 <h2 className="text-lg font-semibold tracking-tight">
                   Instalar {systemPwa.shortName}
@@ -196,7 +196,7 @@ export function PwaInstallPrompt() {
         </div>
 
         <div className="p-5 sm:p-6">
-          {showAndroidInstall && (
+          {platform.isAndroid && (
             <>
               <div className="flex items-start gap-3 rounded-3xl bg-[#f7f7f5] p-4">
                 <div className="mt-0.5 flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-white text-purple-700">
@@ -209,28 +209,47 @@ export function PwaInstallPrompt() {
                   </p>
                   <p className="mt-1 text-sm leading-6 text-zinc-500">
                     Instale o {systemPwa.shortName} no celular para abrir seu
-                    painel mais rápido e acompanhar sua loja com mais facilidade.
+                    painel mais rápido e acompanhar seu mercado com mais
+                    facilidade.
                   </p>
                 </div>
               </div>
 
+              {!showAndroidInstall && (
+                <div className="mt-5 rounded-[28px] bg-[#f7f7f5] p-4">
+                  <GuideStep
+                    icon={EllipsisVerticalIcon}
+                    title="1. Abra o menu do navegador"
+                    description="Toque nos três pontos no canto superior da tela."
+                  />
+
+                  <GuideStep
+                    icon={ArrowDownTrayIcon}
+                    title="2. Instale o aplicativo"
+                    description="Toque em Instalar app ou Adicionar à tela inicial."
+                  />
+                </div>
+              )}
+
               <div className="mt-5 grid gap-3">
-                <button
-                  type="button"
-                  onClick={handleInstallClick}
-                  disabled={isInstalling}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-purple-700 px-5 text-sm font-semibold text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  <ArrowDownTrayIcon className="h-5 w-5" />
-                  {isInstalling ? 'Abrindo instalação...' : 'Instalar app'}
-                </button>
+                {showAndroidInstall && (
+                  <button
+                    type="button"
+                    onClick={handleInstallClick}
+                    disabled={isInstalling}
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-purple-700 px-5 text-sm font-semibold text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <ArrowDownTrayIcon className="h-5 w-5" />
+                    {isInstalling ? 'Abrindo instalação...' : 'Instalar app'}
+                  </button>
+                )}
 
                 <button
                   type="button"
                   onClick={dismissPrompt}
                   className="flex h-11 w-full items-center justify-center rounded-full border border-zinc-200 bg-white text-sm font-semibold text-zinc-950 transition hover:bg-zinc-50"
                 >
-                  Agora não
+                  {showAndroidInstall ? 'Agora não' : 'Entendi'}
                 </button>
               </div>
             </>
@@ -249,7 +268,7 @@ export function PwaInstallPrompt() {
                   </p>
                   <p className="mt-1 text-sm leading-6 text-zinc-500">
                     Adicione o {systemPwa.shortName} à tela inicial para abrir
-                    o painel da sua loja mais rápido.
+                    o painel do seu mercado mais rápido.
                   </p>
                 </div>
               </div>

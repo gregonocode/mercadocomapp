@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   ArrowRightIcon,
   CheckIcon,
   EyeIcon,
   EyeSlashIcon,
-  ShoppingBagIcon,
 } from '@heroicons/react/24/outline';
 import { createClient } from '@/app/lib/supabase/client';
 import { loginWithPassword } from './actions';
@@ -85,22 +85,22 @@ export default function LoginPage() {
                   <span className="h-2 w-2 rounded-full bg-white" />
                 </span>
                 <span className="text-sm font-semibold tracking-tight">
-                  lojacomapp
+                  mercadocomapp
                 </span>
               </div>
 
               <h1 className="max-w-md text-4xl font-semibold tracking-[-0.04em] text-white">
-                Comece sua loja com app
+                Seu Mercado com Aplicativo
               </h1>
 
               <p className="mt-4 max-w-sm text-sm leading-6 text-zinc-300">
-                Acesse sua conta para gerenciar produtos, pedidos e sua loja
+                Acesse sua conta para gerenciar produtos, pedidos e seu mercado
                 online instalável.
               </p>
 
               <div className="mt-10 w-full max-w-xs space-y-3">
                 <Step active number="1" text="Entre na sua conta" />
-                <Step number="2" text="Gerencie sua loja" />
+                <Step number="2" text="Gerencie seu mercado" />
                 <Step number="3" text="Venda com seu App" />
               </div>
             </div>
@@ -110,14 +110,21 @@ export default function LoginPage() {
         <section className="flex min-h-screen items-center justify-center px-6 py-10">
           <div className="w-full max-w-[400px]">
             <div className="mb-10 text-center lg:hidden">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-black">
-                <ShoppingBagIcon className="h-6 w-6" />
+              <div className="relative mx-auto mb-4 h-12 w-12 overflow-hidden rounded-2xl shadow-sm">
+                <Image
+                  src="/icon/icon-mercado-192.png"
+                  alt="Mercado com app"
+                  fill
+                  sizes="48px"
+                  className="object-cover"
+                  priority
+                />
               </div>
               <p className="text-xl font-semibold tracking-tight">
-                lojacomapp
+                mercadocomapp
               </p>
               <p className="mt-1 text-sm text-zinc-500">
-                Sua loja online com aplicativo
+                Seu mercado online com aplicativo
               </p>
             </div>
 
@@ -126,7 +133,7 @@ export default function LoginPage() {
                 Entrar na conta
               </h2>
               <p className="mt-2 text-sm text-zinc-500">
-                Acesse sua dashboard para gerenciar sua loja.
+                Acesse sua dashboard para gerenciar seu mercado.
               </p>
             </div>
 

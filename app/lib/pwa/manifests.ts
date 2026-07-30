@@ -9,10 +9,10 @@ export const systemPwa = {
   themeColor: '#000000',
   backgroundColor: '#000000',
   icons: {
-    icon192: '/icon/icon-192.png',
-    icon512: '/icon/icon-512.png',
-    maskable192: '/icon/icon-maskable-192.png',
-    maskable512: '/icon/icon-maskable-512.png',
+    icon192: '/icon/icon-mercado-192.png',
+    icon512: '/icon/icon-mercado-512.png',
+    maskable192: '/icon/icon-mercado-192.png',
+    maskable512: '/icon/icon-mercado-512.png',
   },
 } as const;
 

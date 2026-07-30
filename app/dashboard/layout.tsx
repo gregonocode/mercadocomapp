@@ -51,7 +51,7 @@ export default async function DashboardLayout({
             <Link href="/dashboard" className="flex items-center gap-3 px-3">
               <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-zinc-700">
                 <Image
-                  src="/icon/icon-512.png"
+                  src="/icon/icon-mercado-512.png"
                   alt="Logo da lojacomapp"
                   width={44}
                   height={44}
@@ -61,7 +61,7 @@ export default async function DashboardLayout({
 
               <div className="min-w-0">
                 <p className="text-base font-black tracking-tight">
-                  lojacomapp
+                  MercadoComApp
                 </p>
                 <p className="text-xs font-semibold text-zinc-400">
                   Painel do lojista
@@ -146,7 +146,7 @@ export default async function DashboardLayout({
               <Link href="/dashboard" className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-[#F4F2FF] ring-1 ring-zinc-200/70">
                   <Image
-                    src="/icon/icon-512.png"
+                    src="/icon/icon-mercado-512.png"
                     alt="Logo da lojacomapp"
                     width={40}
                     height={40}
