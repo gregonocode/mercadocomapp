@@ -2,17 +2,18 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   ArrowRightIcon,
-  ArchiveBoxIcon,
-  CheckCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   CubeIcon,
-  CursorArrowRaysIcon,
-  ExclamationTriangleIcon,
+  PencilSquareIcon,
   PlusIcon,
   ShoppingBagIcon,
-  SparklesIcon,
-  TagIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { createClient } from '@/app/lib/supabase/server';
+import { ProductCategoryFilter } from './product-category-filter';
+
+const PRODUCTS_PER_PAGE = 20;
 
 type Produto = {
   id: string;
@@ -24,7 +25,20 @@ type Produto = {
   imagem_url?: string | null;
   ativo?: boolean | null;
   estoque?: number | null;
+  categoria_id?: string | null;
   created_at?: string | null;
+};
+
+type Categoria = {
+  id: string;
+  nome: string;
+};
+
+type ProdutosPageProps = {
+  searchParams: Promise<{
+    categoria?: string | string[];
+    pagina?: string | string[];
+  }>;
 };
 
 function formatCurrency(value: number | string | null | undefined) {
@@ -34,8 +48,11 @@ function formatCurrency(value: number | string | null | undefined) {
   }).format(Number(value || 0));
 }
 
-export default async function ProdutosPage() {
+export default async function ProdutosPage({
+  searchParams,
+}: ProdutosPageProps) {
   const supabase = await createClient();
+  const filters = await searchParams;
 
   const {
     data: { user },
@@ -47,7 +64,7 @@ export default async function ProdutosPage() {
 
   const { data: loja } = await supabase
     .from('mercados')
-    .select('id, nome, slug')
+    .select('id, slug')
     .eq('proprietario_id', user.id)
     .maybeSingle();
 
@@ -55,124 +72,106 @@ export default async function ProdutosPage() {
     return <EmptyStoreState />;
   }
 
-  const { data: produtos } = await supabase
-    .from('produtos')
-    .select('*')
+  const { data: categorias, error: categoriasError } = await supabase
+    .from('categorias')
+    .select('id, nome')
     .eq('mercado_id', loja.id)
-    .order('created_at', { ascending: false });
+    .order('ordem', { ascending: true })
+    .order('nome', { ascending: true });
+
+  if (categoriasError) {
+    throw categoriasError;
+  }
+
+  const categoriasDaLoja = (categorias || []) as Categoria[];
+  const requestedCategory = getSingleParam(filters.categoria);
+  const selectedCategory = categoriasDaLoja.some(
+    (categoria) => categoria.id === requestedCategory,
+  )
+    ? requestedCategory
+    : '';
+  const requestedPage = Number.parseInt(getSingleParam(filters.pagina), 10);
+  const currentPage =
+    Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const rangeStart = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const rangeEnd = rangeStart + PRODUCTS_PER_PAGE - 1;
+
+  let productsQuery = supabase
+    .from('produtos')
+    .select('*', { count: 'exact' })
+    .eq('mercado_id', loja.id)
+    .order('created_at', { ascending: false })
+    .range(rangeStart, rangeEnd);
+
+  if (selectedCategory) {
+    productsQuery = productsQuery.eq('categoria_id', selectedCategory);
+  }
+
+  const {
+    data: produtos,
+    count: productCount,
+    error: produtosError,
+  } = await productsQuery;
+
+  if (produtosError) {
+    throw produtosError;
+  }
 
   const produtosDaLoja = (produtos || []) as Produto[];
-  const produtosAtivos = produtosDaLoja.filter(
-    (produto) => produto.ativo !== false,
-  ).length;
-  const produtosInativos = produtosDaLoja.length - produtosAtivos;
-  const produtosComEstoqueBaixo = produtosDaLoja.filter((produto) => {
-    const estoque = Number(produto.estoque ?? 0);
-    return produto.ativo !== false && estoque <= 5;
-  }).length;
-  const produtosEmOferta = produtosDaLoja.filter((produto) =>
-    Boolean(produto.preco_promocional),
-  ).length;
-  const totalEmEstoque = produtosDaLoja.reduce(
-    (total, produto) => total + Number(produto.estoque ?? 0),
-    0,
+  const totalProducts = productCount || 0;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalProducts / PRODUCTS_PER_PAGE),
   );
-  const percentualAtivos =
-    produtosDaLoja.length > 0
-      ? Math.round((produtosAtivos / produtosDaLoja.length) * 100)
-      : 0;
+
+  if (currentPage > totalPages) {
+    redirect(getProductsHref(totalPages, selectedCategory));
+  }
+
+  const categoryNames = new Map(
+    categoriasDaLoja.map((categoria) => [categoria.id, categoria.nome]),
+  );
 
   return (
     <div className="space-y-5">
-      <section className="flex flex-col gap-4 rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between lg:p-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-[#F7F7F4] px-3 py-1 text-xs font-semibold text-zinc-600">
-            <span className="h-2 w-2 rounded-full bg-[#F4F2FF]" />
-            Catálogo
-          </div>
-
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl lg:text-4xl">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-950 sm:text-3xl">
             Produtos
           </h1>
-
-          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-zinc-500">
-            Cadastre, revise e acompanhe os itens publicados na vitrine da{' '}
-            {loja.nome}.
+          <p className="mt-1 text-sm font-normal text-zinc-500">
+            {totalProducts === 1
+              ? '1 produto cadastrado'
+              : `${totalProducts} produtos cadastrados`}
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <Link
+          href="/dashboard/produtos/novo"
+          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-black"
+        >
+          Novo produto
+          <PlusIcon className="h-4 w-4" />
+        </Link>
+      </header>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <ProductCategoryFilter
+          categories={categoriasDaLoja}
+          selectedCategory={selectedCategory}
+        />
+
+        {selectedCategory && (
           <Link
-            href="/dashboard/produtos/novo"
-            className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-black"
+            href="/dashboard/produtos"
+            className="text-sm font-semibold text-zinc-500 transition hover:text-zinc-950"
           >
-            Novo produto
-            <PlusIcon className="h-4 w-4" />
+            Limpar filtro
           </Link>
+        )}
+      </div>
 
-          <Link
-            href={`/${loja.slug}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
-          >
-            Ver loja
-            <CursorArrowRaysIcon className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          title="Total de produtos"
-          value={String(produtosDaLoja.length)}
-          description="Itens cadastrados"
-          icon={CubeIcon}
-        />
-        <SummaryCard
-          title="Produtos ativos"
-          value={String(produtosAtivos)}
-          description={`${percentualAtivos}% do catálogo`}
-          icon={CheckCircleIcon}
-        />
-        <SummaryCard
-          title="Estoque baixo"
-          value={String(produtosComEstoqueBaixo)}
-          description="Com 5 unidades ou menos"
-          icon={ExclamationTriangleIcon}
-        />
-        <SummaryCard
-          title="Em oferta"
-          value={String(produtosEmOferta)}
-          description="Com preço promocional"
-          icon={TagIcon}
-        />
-      </section>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_340px]">
-        <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-zinc-100 p-5 sm:flex-row sm:items-center sm:justify-between lg:p-6">
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-zinc-950">
-                Catálogo da loja
-              </h2>
-              <p className="mt-1 text-sm font-normal text-zinc-400">
-                {produtosDaLoja.length === 1
-                  ? '1 produto cadastrado'
-                  : `${produtosDaLoja.length} produtos cadastrados`}
-              </p>
-            </div>
-
-            <div className="flex w-fit items-center gap-2 rounded-full bg-[#F7F7F4] p-1">
-              <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-950 shadow-sm">
-                Todos
-              </span>
-              <span className="px-3 py-1.5 text-xs font-medium text-zinc-400">
-                {produtosAtivos} ativos
-              </span>
-            </div>
-          </div>
-
+      <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
           {produtosDaLoja.length > 0 ? (
             <div className="divide-y divide-zinc-100">
               {produtosDaLoja.map((produto) => {
@@ -213,6 +212,12 @@ export default async function ProdutosPage() {
 
                         <p className="mt-1 text-xs font-medium text-zinc-400 sm:text-sm">
                           {produto.marca || 'Produto'} ·{' '}
+                          {produto.categoria_id &&
+                            categoryNames.get(produto.categoria_id) && (
+                              <>
+                                {categoryNames.get(produto.categoria_id)} ·{' '}
+                              </>
+                            )}
                           <span
                             className={
                               estoque <= 5 ? 'text-amber-600' : undefined
@@ -230,7 +235,7 @@ export default async function ProdutosPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-5 md:justify-end">
+                    <div className="flex items-center justify-between gap-4 md:justify-end">
                       <div className="text-left md:text-right">
                         <p className="text-base font-bold text-zinc-950">
                           {formatCurrency(
@@ -244,15 +249,35 @@ export default async function ProdutosPage() {
                         )}
                       </div>
 
-                      <Link
-                        href={`/${loja.slug}/${produto.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950"
-                        aria-label={`Abrir produto ${produto.nome || produto.id}`}
-                      >
-                        <ArrowRightIcon className="h-4 w-4" />
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled
+                          title="Edição em breve"
+                          aria-label={`Editar produto ${produto.nome || produto.id}`}
+                          className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-400"
+                        >
+                          <PencilSquareIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled
+                          title="Exclusão em breve"
+                          aria-label={`Excluir produto ${produto.nome || produto.id}`}
+                          className="flex h-10 w-10 cursor-not-allowed items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-300"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                        <Link
+                          href={`/${loja.slug}/${produto.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950"
+                          aria-label={`Abrir produto ${produto.nome || produto.id}`}
+                        >
+                          <ArrowRightIcon className="h-4 w-4" />
+                        </Link>
+                      </div>
                     </div>
                   </article>
                 );
@@ -265,143 +290,125 @@ export default async function ProdutosPage() {
               </div>
 
               <h2 className="mt-5 text-lg font-bold text-zinc-950">
-                Nenhum produto cadastrado
+                {selectedCategory
+                  ? 'Nenhum produto nesta categoria'
+                  : 'Nenhum produto cadastrado'}
               </h2>
 
               <p className="mt-2 max-w-md text-sm font-medium leading-6 text-zinc-400">
-                Crie seu primeiro produto para começar a montar o catálogo da
-                loja.
+                {selectedCategory
+                  ? 'Escolha outra categoria ou limpe o filtro para ver todos os produtos.'
+                  : 'Crie seu primeiro produto para começar a montar o catálogo da loja.'}
               </p>
 
-              <Link
-                href="/dashboard/produtos/novo"
-                className="mt-6 flex h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-black"
-              >
-                Cadastrar produto
-                <PlusIcon className="h-4 w-4" />
-              </Link>
+              {selectedCategory ? (
+                <Link
+                  href="/dashboard/produtos"
+                  className="mt-6 flex h-11 items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                >
+                  Limpar filtro
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard/produtos/novo"
+                  className="mt-6 flex h-12 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-semibold text-white transition hover:bg-black"
+                >
+                  Cadastrar produto
+                  <PlusIcon className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           )}
-        </div>
-
-        <aside className="space-y-5">
-          <div className="overflow-hidden rounded-[28px] bg-zinc-950 p-5 text-white shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                  Inventário
-                </p>
-                <p className="mt-2 text-3xl font-bold tracking-tight">
-                  {totalEmEstoque}
-                </p>
-                <p className="mt-1 text-sm font-medium text-zinc-400">
-                  unidades disponíveis
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white ring-1 ring-white/10">
-                <ArchiveBoxIcon className="h-6 w-6" />
-              </div>
-            </div>
-
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-[#F4F2FF]"
-                style={{ width: `${percentualAtivos}%` }}
-              />
-            </div>
-            <div className="mt-2 flex items-center justify-between text-xs font-medium text-zinc-400">
-              <span>Catálogo ativo</span>
-              <span>{percentualAtivos}%</span>
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4F2FF] text-zinc-950">
-                <SparklesIcon className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-zinc-950">
-                  Visibilidade do catálogo
-                </h2>
-                <p className="text-xs font-normal text-zinc-400">
-                  Situação dos seus produtos
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <CatalogRow
-                label="Ativos na vitrine"
-                value={produtosAtivos}
-                tone="dark"
-              />
-              <CatalogRow
-                label="Produtos inativos"
-                value={produtosInativos}
-              />
-              <CatalogRow
-                label="Precisam de estoque"
-                value={produtosComEstoqueBaixo}
-                tone="warning"
-              />
-              <CatalogRow
-                label="Ofertas publicadas"
-                value={produtosEmOferta}
-                tone="accent"
-              />
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-bold text-zinc-950">Loja online</h2>
-            <p className="mt-1 truncate text-xs font-normal text-zinc-400">
-              lojacomapp.com.br/{loja.slug}
-            </p>
-            <Link
-              href={`/${loja.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-5 flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#F7F7F4] text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
-            >
-              Abrir catálogo
-              <ArrowRightIcon className="h-4 w-4" />
-            </Link>
-          </div>
-        </aside>
       </section>
+
+      {totalPages > 1 && (
+        <nav
+          aria-label="Paginação de produtos"
+          className="flex items-center justify-between gap-4"
+        >
+          <PaginationLink
+            page={currentPage - 1}
+            category={selectedCategory}
+            disabled={currentPage <= 1}
+            label="Anterior"
+            icon={<ChevronLeftIcon className="h-4 w-4" />}
+          />
+
+          <p className="text-sm font-medium text-zinc-500">
+            Página <span className="font-bold text-zinc-950">{currentPage}</span>{' '}
+            de {totalPages}
+          </p>
+
+          <PaginationLink
+            page={currentPage + 1}
+            category={selectedCategory}
+            disabled={currentPage >= totalPages}
+            label="Próxima"
+            icon={<ChevronRightIcon className="h-4 w-4" />}
+            iconAfter
+          />
+        </nav>
+      )}
     </div>
   );
 }
 
-function SummaryCard({
-  title,
-  value,
-  description,
-  icon: Icon,
+function getSingleParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] || '' : value || '';
+}
+
+function getProductsHref(page: number, category: string) {
+  const params = new URLSearchParams();
+
+  if (category) {
+    params.set('categoria', category);
+  }
+
+  if (page > 1) {
+    params.set('pagina', String(page));
+  }
+
+  const query = params.toString();
+  return `/dashboard/produtos${query ? `?${query}` : ''}`;
+}
+
+function PaginationLink({
+  page,
+  category,
+  disabled,
+  label,
+  icon,
+  iconAfter = false,
 }: {
-  title: string;
-  value: string;
-  description: string;
-  icon: React.ElementType;
+  page: number;
+  category: string;
+  disabled: boolean;
+  label: string;
+  icon: React.ReactNode;
+  iconAfter?: boolean;
 }) {
+  const className =
+    'flex h-10 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold';
+
+  if (disabled) {
+    return (
+      <span className={`${className} border-zinc-100 text-zinc-300`}>
+        {!iconAfter && icon}
+        {label}
+        {iconAfter && icon}
+      </span>
+    );
+  }
+
   return (
-    <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-zinc-500">{title}</p>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-zinc-950">
-            {value}
-          </p>
-          <p className="mt-2 text-xs font-normal text-zinc-400">
-            {description}
-          </p>
-        </div>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#F4F2FF] text-zinc-950">
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </div>
+    <Link
+      href={getProductsHref(page, category)}
+      className={`${className} border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50`}
+    >
+      {!iconAfter && icon}
+      {label}
+      {iconAfter && icon}
+    </Link>
   );
 }
 
@@ -417,34 +424,6 @@ function StatusBadge({ active }: { active: boolean }) {
     >
       {active ? 'Ativo' : 'Inativo'}
     </span>
-  );
-}
-
-function CatalogRow({
-  label,
-  value,
-  tone = 'neutral',
-}: {
-  label: string;
-  value: number;
-  tone?: 'neutral' | 'dark' | 'warning' | 'accent';
-}) {
-  const valueClass = {
-    neutral: 'bg-zinc-100 text-zinc-600',
-    dark: 'bg-zinc-950 text-white',
-    warning: 'bg-amber-50 text-amber-700',
-    accent: 'bg-[#F4F2FF] text-zinc-950',
-  }[tone];
-
-  return (
-    <div className="flex items-center justify-between rounded-2xl bg-[#F7F7F4] px-4 py-3">
-      <span className="text-sm font-medium text-zinc-600">{label}</span>
-      <span
-        className={`flex min-w-7 items-center justify-center rounded-full px-2 py-1 text-xs font-semibold ${valueClass}`}
-      >
-        {value}
-      </span>
-    </div>
   );
 }
 
