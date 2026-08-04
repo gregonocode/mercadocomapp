@@ -56,6 +56,9 @@ export default async function LojaPage({
           ),
       )
     : products;
+  const featuredProducts = visibleProducts.filter(
+    (product) => product.destaque,
+  );
   const banners = [
     {
       id: market.id,
@@ -249,7 +252,7 @@ export default async function LojaPage({
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {visibleProducts.map((produto) => (
+            {featuredProducts.map((produto) => (
               <article
                 key={produto.id}
                 className="overflow-hidden rounded-3xl border border-zinc-100 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.05)]"
@@ -311,17 +314,17 @@ export default async function LojaPage({
             ))}
           </div>
 
-          {visibleProducts.length === 0 && (
+          {featuredProducts.length === 0 && (
             <div className="rounded-3xl bg-zinc-50 px-6 py-12 text-center">
               <h3 className="font-bold text-zinc-900">
                 {search
-                  ? 'Nenhum produto encontrado'
-                  : 'Nenhum produto cadastrado'}
+                  ? 'Nenhum produto em destaque encontrado'
+                  : 'Nenhum produto em destaque'}
               </h3>
               <p className="mt-2 text-sm text-zinc-500">
                 {search
                   ? 'Tente pesquisar usando outro nome.'
-                  : 'Os produtos ativos aparecerão aqui.'}
+                  : 'Os produtos marcados como destaque aparecerão aqui.'}
               </p>
             </div>
           )}
@@ -352,10 +355,14 @@ export default async function LojaPage({
             icon={<Tag className="h-6 w-6" />}
           />
 
-          <BottomNavigationButton
-            label="Carrinho"
-            icon={<Truck className="h-7 w-7" />}
-          />
+          <Link
+            href={`/${market.slug}/sacola`}
+            aria-label="Carrinho"
+            className="relative flex flex-col items-center justify-center gap-1 text-zinc-500 transition active:scale-95"
+          >
+            <Truck className="h-7 w-7" />
+            <span className="sr-only">Carrinho</span>
+          </Link>
         </div>
       </nav>
     </main>

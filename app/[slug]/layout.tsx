@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { StoreCartProvider } from '@/app/components/storefront/cart-provider';
 import StorePwaInstallPrompt from '@/app/components/pwa/StorePwaInstallPrompt';
 import { SystemPwaRegistrar } from '@/app/components/system-pwa-registrar';
 import { getMarketBySlug } from '@/app/lib/storefront';
@@ -61,7 +62,9 @@ export default async function StoreLayout({
           themeColor={getSafeThemeColor(market.cor_primaria)}
         />
       )}
-      {children}
+      <StoreCartProvider key={slug} slug={slug}>
+        {children}
+      </StoreCartProvider>
     </>
   );
 }

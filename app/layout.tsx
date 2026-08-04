@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Loja com app",
-  description: "crie sua loja online com cara de app",
+  title: "Mercado com app",
+  description: "Seu mercado com cara de aplicativo",
 };
 
 export default function RootLayout({

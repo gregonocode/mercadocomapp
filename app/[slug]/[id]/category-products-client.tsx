@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useStoreCart } from '@/app/components/storefront/cart-provider';
 
 export type CategoryProduct = {
   id: string;
@@ -54,10 +55,7 @@ export default function CategoryProductsClient({
   const [pesquisa, setPesquisa] = useState('');
   const [filtroAtivo, setFiltroAtivo] =
     useState<FiltroAtivo>('todos');
-
-  const [quantidades, setQuantidades] = useState<
-    Record<string, number>
-  >({});
+  const { items, addItem, setQuantity, totalItems } = useStoreCart();
 
   const produtosDaCategoria = useMemo(() => {
     const termo = pesquisa.trim().toLowerCase();
@@ -77,37 +75,30 @@ export default function CategoryProductsClient({
     });
   }, [produtos, pesquisa, filtroAtivo]);
 
-  const totalCarrinho = Object.values(quantidades).reduce(
-    (total, quantidade) => total + quantidade,
-    0,
-  );
-
   function alterarQuantidade(
-    produtoId: string,
+    produto: CategoryProduct,
     alteracao: number,
   ) {
-    setQuantidades((estadoAtual) => {
-      const quantidadeAtual = estadoAtual[produtoId] ?? 0;
-      const novaQuantidade = Math.max(
-        0,
-        quantidadeAtual + alteracao,
-      );
+    const quantidadeAtual =
+      items.find((item) => item.id === produto.id)?.quantidade ?? 0;
 
-      return {
-        ...estadoAtual,
-        [produtoId]: novaQuantidade,
-      };
-    });
+    if (quantidadeAtual === 0 && alteracao > 0) {
+      adicionarProduto(produto);
+      return;
+    }
+
+    setQuantity(produto.id, quantidadeAtual + alteracao);
   }
 
-  function adicionarProduto(produtoId: string) {
-    setQuantidades((estadoAtual) => {
-      const quantidadeAtual = estadoAtual[produtoId] ?? 0;
+  function adicionarProduto(produto: CategoryProduct) {
+    if (items.some((item) => item.id === produto.id)) return;
 
-      return {
-        ...estadoAtual,
-        [produtoId]: Math.max(1, quantidadeAtual),
-      };
+    addItem({
+      id: produto.id,
+      nome: produto.nome,
+      preco: produto.preco,
+      imagemUrl: produto.imagemUrl,
+      quantidadeDisponivel: produto.quantidadeDisponivel,
     });
   }
 
@@ -242,7 +233,7 @@ export default function CategoryProductsClient({
           {produtosDaCategoria.length > 0 ? (
             produtosDaCategoria.map((produto) => {
               const quantidade =
-                quantidades[produto.id] ?? 0;
+                items.find((item) => item.id === produto.id)?.quantidade ?? 0;
 
               return (
                 <article
@@ -252,7 +243,7 @@ export default function CategoryProductsClient({
                   <div className="flex gap-4">
                     {/* Imagem do produto */}
                     <div
-                      className="relative flex h-44 w-[34%] max-w-40 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-100"
+                      className="relative flex aspect-square w-[34%] max-w-36 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-100"
                     >
                       {produto.imagemUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -300,8 +291,8 @@ export default function CategoryProductsClient({
                         )}
                       </div>
 
-                      <div className="mt-3 flex items-center gap-1.5 text-sm text-zinc-500">
-                        <Building2 className="h-4 w-4" />
+                      <div className="mt-2 flex items-center gap-1 text-xs text-zinc-500">
+                        <Building2 className="h-3.5 w-3.5" />
 
                         <span>
                           Vendido por {nomeMercado}
@@ -322,7 +313,7 @@ export default function CategoryProductsClient({
                       <button
                         type="button"
                         onClick={() =>
-                          alterarQuantidade(produto.id, -1)
+                          alterarQuantidade(produto, -1)
                         }
                         disabled={
                           quantidade === 0 ||
@@ -341,7 +332,7 @@ export default function CategoryProductsClient({
                       <button
                         type="button"
                         onClick={() =>
-                          alterarQuantidade(produto.id, 1)
+                          alterarQuantidade(produto, 1)
                         }
                         disabled={!produto.emEstoque}
                         aria-label={`Aumentar quantidade de ${produto.nome}`}
@@ -354,7 +345,7 @@ export default function CategoryProductsClient({
                     <button
                       type="button"
                       onClick={() =>
-                        adicionarProduto(produto.id)
+                          adicionarProduto(produto)
                       }
                       disabled={!produto.emEstoque}
                       className={`h-12 flex-1 rounded-full text-base font-bold transition active:scale-[0.98] ${
@@ -436,7 +427,7 @@ export default function CategoryProductsClient({
             href={`/${slug}/sacola`}
             label="Carrinho"
             icon={<ShoppingCart className="h-6 w-6" />}
-            badge={totalCarrinho}
+            badge={totalItems}
           />
         </div>
       </nav>

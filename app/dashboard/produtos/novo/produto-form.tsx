@@ -59,6 +59,7 @@ export default function ProdutoForm({
   const [estoque, setEstoque] = useState('0');
   const [imagemUrl, setImagemUrl] = useState('');
   const [ativo, setAtivo] = useState(true);
+  const [destaque, setDestaque] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -155,6 +156,7 @@ export default function ProdutoForm({
         mercado_id: loja.id,
         categoria_id: categoriaId,
         nome: nome.trim(),
+        slug: slugify(nome),
         marca: marca.trim() || null,
         descricao: descricao.trim() || null,
         preco: precoNumber,
@@ -164,6 +166,7 @@ export default function ProdutoForm({
         imagem_url: imagemUrl || null,
         estoque: estoqueNumber,
         ativo,
+        destaque,
         updated_at: new Date().toISOString(),
       });
 
@@ -270,6 +273,22 @@ export default function ProdutoForm({
                   className="input-product"
                 />
               </Field>
+              <label className="flex min-h-12 items-center justify-between gap-4 self-end rounded-2xl border border-zinc-200 bg-[#F7F7F4] px-4">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-800">
+                    Produto em destaque
+                  </p>
+                  <p className="mt-0.5 text-xs font-normal text-zinc-400">
+                    Exibir na seção de destaques da loja.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={destaque}
+                  onChange={(event) => setDestaque(event.target.checked)}
+                  className="h-5 w-5 shrink-0 accent-zinc-950"
+                />
+              </label>
               <div className="md:col-span-2">
                 <Field label="Descrição">
                   <textarea
@@ -567,6 +586,18 @@ function formatCurrency(value: number) {
     style: 'currency',
     currency: 'BRL',
   }).format(value);
+}
+
+function slugify(value: string) {
+  const slug = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return slug || `produto-${crypto.randomUUID().slice(0, 8)}`;
 }
 
 function getErrorMessage(error: unknown, fallback: string) {

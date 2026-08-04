@@ -81,9 +81,13 @@ export default function LoginPage() {
 
             <div className="relative z-10 flex w-full flex-col items-center justify-center px-10 text-center">
               <div className="mb-7 flex items-center justify-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white">
-                  <span className="h-2 w-2 rounded-full bg-white" />
-                </span>
+                <Image
+                  src="/icon/icon-mercado-512.png"
+                  alt="Logo MercadoComApp"
+                  width={20}
+                  height={20}
+                  className="h-5 w-5 rounded-md object-cover"
+                />
                 <span className="text-sm font-semibold tracking-tight">
                   mercadocomapp
                 </span>

@@ -33,6 +33,7 @@ export default async function ConfiguracoesPage() {
       cep,
       pix_chave,
       pix_nome,
+      pedido_minimo,
       ativo
     `,
     )

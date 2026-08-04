@@ -36,6 +36,7 @@ type Mercado = {
   cep: string | null;
   pix_chave: string | null;
   pix_nome: string | null;
+  pedido_minimo: number | string | null;
   ativo: boolean;
 } | null;
 
@@ -111,6 +112,9 @@ export default function MercadoOnboardingForm({
   const [cep, setCep] = useState(formatCep(mercado?.cep || ''));
   const [pixChave, setPixChave] = useState(mercado?.pix_chave || '');
   const [pixNome, setPixNome] = useState(mercado?.pix_nome || '');
+  const [pedidoMinimo, setPedidoMinimo] = useState(
+    mercado?.pedido_minimo?.toString() || '',
+  );
   const [ativo, setAtivo] = useState(mercado?.ativo ?? true);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -133,6 +137,7 @@ export default function MercadoOnboardingForm({
         cep,
         pixChave,
         pixNome,
+        pedidoMinimo,
         ativo,
       }),
     [
@@ -150,6 +155,7 @@ export default function MercadoOnboardingForm({
       cep,
       pixChave,
       pixNome,
+      pedidoMinimo,
       ativo,
     ],
   );
@@ -202,6 +208,14 @@ export default function MercadoOnboardingForm({
         estado,
         cep,
       });
+      const pedidoMinimoNumber = parseDecimal(pedidoMinimo);
+
+      if (
+        pedidoMinimo.trim() &&
+        (pedidoMinimoNumber === null || pedidoMinimoNumber < 0)
+      ) {
+        throw new Error('Informe um valor válido para o pedido mínimo.');
+      }
 
       const payload = {
         proprietario_id: userId,
@@ -220,6 +234,7 @@ export default function MercadoOnboardingForm({
         cep: onlyDigits(cep) || null,
         pix_chave: pixChave.trim() || null,
         pix_nome: pixNome.trim() || null,
+        pedido_minimo: pedidoMinimoNumber,
         ativo,
         updated_at: new Date().toISOString(),
       };
@@ -518,6 +533,24 @@ export default function MercadoOnboardingForm({
                   className="input-market"
                 />
               </Field>
+
+              <div className="md:col-span-2">
+                <Field
+                  label="Pedido mínimo para entrega grátis"
+                  hint="Deixe em branco caso não ofereça entrega grátis por valor mínimo."
+                >
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={pedidoMinimo}
+                    onChange={(event) => setPedidoMinimo(event.target.value)}
+                    placeholder="Ex. 50,00"
+                    className="input-market"
+                  />
+                </Field>
+              </div>
 
               <div className="md:col-span-2">
                 <div className="flex gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm leading-6 text-blue-900">
@@ -895,6 +928,13 @@ function getErrorCode(error: unknown) {
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, '');
+}
+
+function parseDecimal(value: string) {
+  if (!value.trim()) return null;
+
+  const parsed = Number(value.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function formatCnpj(value: string) {
