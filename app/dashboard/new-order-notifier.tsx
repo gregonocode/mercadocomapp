@@ -14,11 +14,51 @@ type NewOrder = {
 export default function NewOrderNotifier({ marketId }: { marketId: string | null }) {
   const [orders, setOrders] = useState<NewOrder[]>([]);
   const soundRef = useRef<HTMLAudioElement>(null);
+  const seenOrderIds = useRef(new Set<string>());
 
   useEffect(() => {
     if (!marketId) return;
 
     const supabase = createClient();
+    let active = true;
+    seenOrderIds.current.clear();
+
+    function enqueue(record: Record<string, unknown>, notify = true) {
+      if (typeof record.id !== 'string' || seenOrderIds.current.has(record.id)) {
+        return;
+      }
+
+      const id = record.id;
+      seenOrderIds.current.add(id);
+      if (!notify) return;
+
+      setOrders(current => [
+        ...current,
+        {
+          id,
+          number: Number(record.numero_pedido || 0),
+          total: Number(record.valor_total || 0),
+        },
+      ]);
+    }
+
+    async function checkForNewOrders(notify: boolean) {
+      const { data } = await supabase
+        .from('pedidos')
+        .select('id, numero_pedido, valor_total')
+        .eq('mercado_id', marketId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!active) return;
+
+      for (const record of (data || []).reverse()) {
+        enqueue(record as Record<string, unknown>, notify);
+      }
+    }
+
+    void checkForNewOrders(false);
+    const polling = window.setInterval(() => void checkForNewOrders(true), 10_000);
     const channel = supabase
       .channel(`new-orders:${marketId}`)
       .on(
@@ -30,24 +70,14 @@ export default function NewOrderNotifier({ marketId }: { marketId: string | null
           filter: `mercado_id=eq.${marketId}`,
         },
         (payload) => {
-          const record = payload.new as Record<string, unknown>;
-
-          if (typeof record.id !== 'string') return;
-          const id = record.id;
-
-          setOrders(current => [
-            ...current,
-            {
-              id,
-              number: Number(record.numero_pedido || 0),
-              total: Number(record.valor_total || 0),
-            },
-          ]);
+          enqueue(payload.new as Record<string, unknown>);
         },
       )
       .subscribe();
 
     return () => {
+      active = false;
+      window.clearInterval(polling);
       void supabase.removeChannel(channel);
     };
   }, [marketId]);
