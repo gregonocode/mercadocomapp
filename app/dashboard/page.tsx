@@ -313,7 +313,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <aside className="space-y-5">
+        <aside className="space-y-5 xl:sticky xl:top-24 xl:max-h-[calc(100vh-7rem)] xl:self-start xl:overflow-y-auto xl:pr-1">
           <div className="min-h-64 rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
             <p className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
               Resumo rápido

@@ -37,6 +37,7 @@ type Mercado = {
   pix_chave: string | null;
   pix_nome: string | null;
   pedido_minimo: number | string | null;
+  taxa_entrega: number | string | null;
   ativo: boolean;
 } | null;
 
@@ -115,6 +116,9 @@ export default function MercadoOnboardingForm({
   const [pedidoMinimo, setPedidoMinimo] = useState(
     mercado?.pedido_minimo?.toString() || '',
   );
+  const [taxaEntrega, setTaxaEntrega] = useState(
+    mercado?.taxa_entrega?.toString() || '',
+  );
   const [ativo, setAtivo] = useState(mercado?.ativo ?? true);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -138,6 +142,7 @@ export default function MercadoOnboardingForm({
         pixChave,
         pixNome,
         pedidoMinimo,
+        taxaEntrega,
         ativo,
       }),
     [
@@ -156,6 +161,7 @@ export default function MercadoOnboardingForm({
       pixChave,
       pixNome,
       pedidoMinimo,
+      taxaEntrega,
       ativo,
     ],
   );
@@ -209,12 +215,23 @@ export default function MercadoOnboardingForm({
         cep,
       });
       const pedidoMinimoNumber = parseDecimal(pedidoMinimo);
+      const taxaEntregaNumber = parseDecimal(taxaEntrega);
 
       if (
         pedidoMinimo.trim() &&
         (pedidoMinimoNumber === null || pedidoMinimoNumber < 0)
       ) {
         throw new Error('Informe um valor válido para o pedido mínimo.');
+      }
+
+      if (taxaEntrega.trim() && (taxaEntregaNumber === null || taxaEntregaNumber < 0)) {
+        throw new Error('Informe um valor válido para a taxa de entrega.');
+      }
+
+      if (pedidoMinimoNumber === null && taxaEntregaNumber === null) {
+        throw new Error(
+          'Informe a taxa de entrega quando não houver pedido mínimo para entrega grátis.',
+        );
       }
 
       const payload = {
@@ -235,6 +252,7 @@ export default function MercadoOnboardingForm({
         pix_chave: pixChave.trim() || null,
         pix_nome: pixNome.trim() || null,
         pedido_minimo: pedidoMinimoNumber,
+        taxa_entrega: taxaEntregaNumber,
         ativo,
         updated_at: new Date().toISOString(),
       };
@@ -547,6 +565,24 @@ export default function MercadoOnboardingForm({
                     value={pedidoMinimo}
                     onChange={(event) => setPedidoMinimo(event.target.value)}
                     placeholder="Ex. 50,00"
+                    className="input-market"
+                  />
+                </Field>
+              </div>
+
+              <div className="md:col-span-2">
+                <Field
+                  label="Taxa de entrega"
+                  hint="Obrigatória quando não houver pedido mínimo para entrega grátis."
+                >
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={taxaEntrega}
+                    onChange={(event) => setTaxaEntrega(event.target.value)}
+                    placeholder="Ex. 8,00"
                     className="input-market"
                   />
                 </Field>

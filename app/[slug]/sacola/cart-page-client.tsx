@@ -142,10 +142,10 @@ export default function CartPageClient({
               <p className="text-xl font-extrabold">{formatCurrency(subtotal)}</p>
             </div>
             <Link
-              href={`/${slug}`}
+              href={`/${slug}/checkout`}
               className="flex h-12 items-center rounded-full bg-[#FFFB66] px-5 text-sm font-extrabold text-zinc-950"
             >
-              Continuar comprando
+              Finalizar pedido
             </Link>
           </div>
         </aside>

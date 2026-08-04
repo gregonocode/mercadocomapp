@@ -11,6 +11,9 @@ export type StorefrontMarket = {
   logo_url: string | null;
   cor_primaria: string | null;
   banner_url: string | null;
+  cep: string | null;
+  cidade: string | null;
+  estado: string | null;
 };
 
 export type StorefrontCategory = {
@@ -43,7 +46,7 @@ export const getMarketBySlug = cache(async (slug: string) => {
   const { data, error } = await supabase
     .from('mercados')
     .select(
-      'id, nome, slug, descricao, logo_url, cor_primaria, banner_url',
+      'id, nome, slug, descricao, logo_url, cor_primaria, banner_url, cep, cidade, estado',
     )
     .eq('slug', slug)
     .eq('ativo', true)

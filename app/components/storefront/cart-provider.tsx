@@ -38,11 +38,21 @@ export function StoreCartProvider({
   children: React.ReactNode;
 }) {
   const storageKey = `mercadocomapp:cart:${slug}`;
-  const [items, setItems] = useState<CartItem[]>(() => getStoredCart(storageKey));
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(items));
-  }, [items, storageKey]);
+    const loadCart = window.setTimeout(() => {
+      setItems(getStoredCart(storageKey));
+      setHydrated(true);
+    }, 0);
+
+    return () => window.clearTimeout(loadCart);
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (hydrated) window.localStorage.setItem(storageKey, JSON.stringify(items));
+  }, [hydrated, items, storageKey]);
 
   const value = useMemo<CartContextValue>(() => {
     function setQuantity(productId: string, quantity: number) {

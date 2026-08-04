@@ -13,6 +13,7 @@ import {
   DashboardMobileNavigation,
   DashboardNavigation,
 } from './DashboardNavigation';
+import NewOrderNotifier from './new-order-notifier';
 
 export default async function DashboardLayout({
   children,
@@ -42,9 +43,16 @@ export default async function DashboardLayout({
     .slice(0, 2)
     .toUpperCase();
 
+  const { data: market } = await supabase
+    .from('mercados')
+    .select('id')
+    .eq('proprietario_id', user.id)
+    .maybeSingle();
+
   return (
     <div className="min-h-screen bg-[#F7F7F4] text-zinc-950">
       <SystemPwaRegistrar />
+      <NewOrderNotifier marketId={market?.id ?? null} />
       <div className="flex min-h-screen">
         <aside className="hidden w-[272px] shrink-0 border-r border-zinc-800 bg-[#0A0A0A] px-3 py-4 text-white lg:block">
           <div className="flex h-full flex-col">

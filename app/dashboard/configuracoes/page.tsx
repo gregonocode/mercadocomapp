@@ -34,6 +34,7 @@ export default async function ConfiguracoesPage() {
       pix_chave,
       pix_nome,
       pedido_minimo,
+      taxa_entrega,
       ativo
     `,
     )

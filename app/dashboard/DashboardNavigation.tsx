@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ChartBarIcon,
   ChevronDownIcon,
   Cog6ToothIcon,
   HomeIcon,
@@ -11,7 +10,6 @@ import {
   ShoppingBagIcon,
   Squares2X2Icon,
   TagIcon,
-  TruckIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
@@ -19,11 +17,6 @@ const navigation = [
     name: 'Início',
     href: '/dashboard',
     icon: HomeIcon,
-  },
-  {
-    name: 'Análises',
-    href: '/dashboard/relatorios',
-    icon: ChartBarIcon,
   },
   {
     name: 'Produtos',
@@ -39,11 +32,6 @@ const navigation = [
     name: 'Categorias',
     href: '/dashboard/categorias',
     icon: TagIcon,
-  },
-  {
-    name: 'Entrega',
-    href: '/dashboard/entrega',
-    icon: TruckIcon,
   },
   {
     name: 'Identidade visual',
