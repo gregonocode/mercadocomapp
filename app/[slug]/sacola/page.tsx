@@ -12,5 +12,12 @@ export default async function SacolaPage({
 
   if (!market) notFound();
 
-  return <CartPageClient slug={market.slug} marketName={market.nome} />;
+  return (
+    <CartPageClient
+      slug={market.slug}
+      marketName={market.nome}
+      pedidoMinimo={market.pedido_minimo}
+      taxaEntrega={market.taxa_entrega}
+    />
+  );
 }

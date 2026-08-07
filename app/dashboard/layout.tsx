@@ -117,11 +117,7 @@ export default async function DashboardLayout({
                   <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-[#CFC7FF] ring-2 ring-white" />
                 </button>
 
-                <button className="flex h-11 items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50">
-                  PT
-                  <ChevronDownIcon className="h-4 w-4 text-zinc-400" />
-                </button>
-
+                
                 <Link
                   href="/dashboard/configuracoes"
                   className="flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-50"

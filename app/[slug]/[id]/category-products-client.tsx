@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useStoreCart } from '@/app/components/storefront/cart-provider';
+import FloatingCartSummary from '@/app/components/storefront/floating-cart-summary';
 
 export type CategoryProduct = {
   id: string;
@@ -39,6 +40,8 @@ type CategoryProductsClientProps = {
   slug: string;
   nomeCategoria: string;
   nomeMercado: string;
+  pedidoMinimo: number | null;
+  taxaEntrega: number | null;
   produtos: CategoryProduct[];
 };
 
@@ -48,6 +51,8 @@ export default function CategoryProductsClient({
   slug,
   nomeCategoria,
   nomeMercado,
+  pedidoMinimo,
+  taxaEntrega,
   produtos,
 }: CategoryProductsClientProps) {
   const router = useRouter();
@@ -395,6 +400,12 @@ export default function CategoryProductsClient({
           )}
         </section>
       </div>
+
+      <FloatingCartSummary
+        slug={slug}
+        pedidoMinimo={pedidoMinimo}
+        taxaEntrega={taxaEntrega}
+      />
 
       {/* Menu inferior */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(0,0,0,0.05)] backdrop-blur-xl">

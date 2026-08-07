@@ -13,7 +13,7 @@ import {
 import { createClient } from '@/app/lib/supabase/server';
 import { ProductCategoryFilter } from './product-category-filter';
 
-const PRODUCTS_PER_PAGE = 20;
+const PRODUCTS_PER_PAGE = 15;
 
 type Produto = {
   id: string;

@@ -12,5 +12,5 @@ export default async function CheckoutPage({
 
   if (!market) notFound();
 
-  return <CheckoutClient slug={market.slug} marketId={market.id} marketName={market.nome} marketAddress={{ cep: market.cep, cidade: market.cidade, estado: market.estado }} />;
+  return <CheckoutClient slug={market.slug} marketId={market.id} marketName={market.nome} pedidoMinimo={market.pedido_minimo} taxaEntrega={market.taxa_entrega} marketAddress={{ cep: market.cep, cidade: market.cidade, estado: market.estado }} />;
 }

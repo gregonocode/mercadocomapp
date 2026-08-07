@@ -58,6 +58,7 @@ export default function ProdutoForm({
   const [precoPromocional, setPrecoPromocional] = useState('');
   const [estoque, setEstoque] = useState('0');
   const [imagemUrl, setImagemUrl] = useState('');
+  const [enviarImagem, setEnviarImagem] = useState(false);
   const [ativo, setAtivo] = useState(true);
   const [destaque, setDestaque] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -150,6 +151,10 @@ export default function ProdutoForm({
 
       if (!Number.isInteger(estoqueNumber) || estoqueNumber < 0) {
         throw new Error('Informe uma quantidade de estoque válida.');
+      }
+
+      if (imagemUrl.trim() && !isValidImageUrl(imagemUrl)) {
+        throw new Error('Informe um link de imagem válido.');
       }
 
       const { error } = await supabase.from('produtos').insert({
@@ -284,9 +289,14 @@ export default function ProdutoForm({
                 </div>
                 <input
                   type="checkbox"
+                  role="switch"
                   checked={destaque}
                   onChange={(event) => setDestaque(event.target.checked)}
-                  className="h-5 w-5 shrink-0 accent-zinc-950"
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className="relative h-7 w-12 shrink-0 rounded-full bg-zinc-300 transition after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition peer-checked:bg-zinc-950 peer-checked:after:translate-x-5 peer-focus-visible:ring-4 peer-focus-visible:ring-zinc-950/10"
                 />
               </label>
               <div className="md:col-span-2">
@@ -350,9 +360,14 @@ export default function ProdutoForm({
                 </div>
                 <input
                   type="checkbox"
+                  role="switch"
                   checked={ativo}
                   onChange={(event) => setAtivo(event.target.checked)}
-                  className="h-5 w-5 shrink-0 accent-zinc-950"
+                  className="peer sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className="relative h-7 w-12 shrink-0 rounded-full bg-zinc-300 transition after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition peer-checked:bg-zinc-950 peer-checked:after:translate-x-5 peer-focus-visible:ring-4 peer-focus-visible:ring-zinc-950/10"
                 />
               </label>
             </div>
@@ -378,7 +393,41 @@ export default function ProdutoForm({
               </div>
 
               <div className="flex flex-col justify-center">
-                <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-300 bg-[#FBFBFA] px-5 py-6 text-center transition hover:border-zinc-400 hover:bg-[#F7F7F4]">
+                <Field label="Link da imagem">
+                  <input
+                    type="url"
+                    value={imagemUrl}
+                    onChange={(event) => setImagemUrl(event.target.value)}
+                    placeholder="https://exemplo.com/produto.jpg"
+                    disabled={uploadingImage}
+                    className="input-product"
+                  />
+                </Field>
+
+                <label className="mt-4 flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-zinc-200 bg-[#F7F7F4] px-4">
+                  <div>
+                    <p className="text-sm font-semibold text-zinc-800">
+                      Enviar imagem
+                    </p>
+                    <p className="mt-0.5 text-xs font-normal text-zinc-400">
+                      Se preferir, selecione um arquivo do seu dispositivo.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={enviarImagem}
+                    onChange={(event) => setEnviarImagem(event.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="relative h-7 w-12 shrink-0 rounded-full bg-zinc-300 transition after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition peer-checked:bg-zinc-950 peer-checked:after:translate-x-5 peer-focus-visible:ring-4 peer-focus-visible:ring-zinc-950/10"
+                  />
+                </label>
+
+                {enviarImagem && (
+                  <label className="mt-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-300 bg-[#FBFBFA] px-5 py-6 text-center transition hover:border-zinc-400 hover:bg-[#F7F7F4]">
                   <CloudArrowUpIcon className="h-8 w-8 text-zinc-400" />
                   <span className="mt-3 text-sm font-semibold text-zinc-800">
                     {uploadingImage ? 'Enviando imagem...' : 'Selecionar imagem'}
@@ -402,6 +451,7 @@ export default function ProdutoForm({
                     }}
                   />
                 </label>
+                )}
 
                 {imagemUrl && (
                   <button
@@ -586,6 +636,15 @@ function formatCurrency(value: number) {
     style: 'currency',
     currency: 'BRL',
   }).format(value);
+}
+
+function isValidImageUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function slugify(value: string) {

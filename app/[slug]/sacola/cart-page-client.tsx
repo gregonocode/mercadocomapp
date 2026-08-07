@@ -7,12 +7,19 @@ import { useStoreCart } from '@/app/components/storefront/cart-provider';
 export default function CartPageClient({
   slug,
   marketName,
+  pedidoMinimo,
+  taxaEntrega,
 }: {
   slug: string;
   marketName: string;
+  pedidoMinimo: number | null;
+  taxaEntrega: number | null;
 }) {
   const { items, subtotal, totalItems, removeItem, setQuantity, clearCart } =
     useStoreCart();
+  const freteGratis = pedidoMinimo !== null && subtotal >= pedidoMinimo;
+  const taxaAplicada = freteGratis ? 0 : (taxaEntrega ?? 0);
+  const totalComEntrega = subtotal + taxaAplicada;
 
   return (
     <main className="min-h-screen bg-zinc-50 pb-36 text-zinc-950">
@@ -138,8 +145,15 @@ export default function CartPageClient({
         <aside className="fixed inset-x-0 bottom-0 border-t border-zinc-200 bg-white/95 p-4 backdrop-blur">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-medium text-zinc-500">Subtotal</p>
-              <p className="text-xl font-extrabold">{formatCurrency(subtotal)}</p>
+              <p className="text-xs font-medium text-zinc-500">
+                {taxaAplicada > 0 ? 'Subtotal + entrega' : 'Subtotal'}
+              </p>
+              {taxaAplicada > 0 && (
+                <p className="mt-0.5 text-xs font-medium text-zinc-500">
+                  Produtos {formatCurrency(subtotal)} + frete {formatCurrency(taxaAplicada)}
+                </p>
+              )}
+              <p className="text-xl font-extrabold">{formatCurrency(totalComEntrega)}</p>
             </div>
             <Link
               href={`/${slug}/checkout`}

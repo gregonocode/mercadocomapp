@@ -13,6 +13,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { Flame, TrendingUp } from 'lucide-react';
 import { createClient } from '@/app/lib/supabase/server';
+import AnimatedCurrency from './AnimatedCurrency';
+import DashboardSalesChart from './DashboardSalesChart';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', {
@@ -37,7 +39,7 @@ export default async function DashboardPage() {
 
   const { data: loja } = await supabase
     .from('mercados')
-    .select('id, nome, slug, ativa:ativo')
+    .select('id, nome, slug, logo_url, ativa:ativo')
     .eq('proprietario_id', user?.id)
     .maybeSingle();
 
@@ -49,6 +51,7 @@ export default async function DashboardPage() {
     pedidosNovosResponse,
     pedidosEntreguesResponse,
     pedidosRecentesResponse,
+    vendasPorPeriodoResponse,
   ] = await Promise.all([
     lojaId
       ? supabase
@@ -88,7 +91,15 @@ export default async function DashboardPage() {
           )
           .eq('mercado_id', lojaId)
           .order('created_at', { ascending: false })
-          .limit(6)
+          .limit(5)
+      : Promise.resolve({ data: [] }),
+
+    lojaId
+      ? supabase
+          .from('dashboard_vendas_por_periodo')
+          .select('periodo,inicio_periodo,faturamento_total,total_pedidos')
+          .eq('mercado_id', lojaId)
+          .order('inicio_periodo', { ascending: true })
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -98,6 +109,12 @@ export default async function DashboardPage() {
   const pedidosEntregues = pedidosEntreguesResponse.count || 0;
   const pedidos = pedidosResponse.data || [];
   const pedidosRecentes = pedidosRecentesResponse.data || [];
+  const vendasPorPeriodo = (vendasPorPeriodoResponse.data || []).map((venda) => ({
+    periodo: venda.periodo,
+    inicioPeriodo: venda.inicio_periodo,
+    faturamentoTotal: Number(venda.faturamento_total || 0),
+    totalPedidos: Number(venda.total_pedidos || 0),
+  }));
 
   const faturamento = pedidos.reduce((acc, pedido) => {
     return acc + Number(pedido.total || 0);
@@ -105,8 +122,7 @@ export default async function DashboardPage() {
 
   const ticketMedio = totalPedidos > 0 ? faturamento / totalPedidos : 0;
 
-  const recebidoHoje = pedidos
-    .filter((pedido) => {
+  const pedidosHoje = pedidos.filter((pedido) => {
       const hoje = new Date();
       const dataPedido = new Date(pedido.created_at);
 
@@ -115,8 +131,12 @@ export default async function DashboardPage() {
         dataPedido.getMonth() === hoje.getMonth() &&
         dataPedido.getFullYear() === hoje.getFullYear()
       );
-    })
-    .reduce((acc, pedido) => acc + Number(pedido.total || 0), 0);
+    });
+
+  const recebidoHoje = pedidosHoje.reduce(
+    (acc, pedido) => acc + Number(pedido.total || 0),
+    0,
+  );
 
   if (!loja) {
     return <EmptyStoreState />;
@@ -166,7 +186,7 @@ export default async function DashboardPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <MetricCard
               title="Faturamento total"
-              value={formatCurrency(faturamento)}
+              value={faturamento}
               description="Total registrado em pedidos"
               icon={TrendingUp}
               trend="+8.0%"
@@ -174,52 +194,14 @@ export default async function DashboardPage() {
 
             <MetricCard
               title="Ticket médio"
-              value={formatCurrency(ticketMedio)}
+              value={ticketMedio}
               description="Média por pedido recebido"
               icon={Flame}
               trend="+2.0%"
             />
           </div>
 
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm lg:p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <h2 className="text-lg font-bold tracking-tight text-zinc-950">
-                  Atividade geral de vendas
-                </h2>
-
-                <p className="mt-1 text-sm font-normal text-zinc-400">
-                  Simulação visual baseada no total vendido.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 rounded-full bg-[#F7F7F4] p-1">
-                <span className="rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400">
-                  14 dias
-                </span>
-                <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-zinc-950 shadow-sm">
-                  1 mês
-                </span>
-                <span className="rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400">
-                  Ano
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-400">
-                  Vendas geradas
-                </p>
-
-                <p className="mt-2 text-3xl font-bold tracking-tight text-zinc-950">
-                  {formatCurrency(faturamento)}
-                </p>
-              </div>
-
-              <SalesChart amount={faturamento} />
-            </div>
-          </div>
+          <DashboardSalesChart data={vendasPorPeriodo} />
 
           <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm lg:p-6">
             <div className="flex items-center justify-between gap-4">
@@ -366,8 +348,18 @@ export default async function DashboardPage() {
 
             <div className="mt-5 rounded-3xl bg-[#F7F7F4] p-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-                  <ShoppingBagIcon className="h-6 w-6" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.12)]">
+                  {loja.logo_url ? (
+                    <img
+                      src={loja.logo_url}
+                      alt={`Logo da ${loja.nome}`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-zinc-950 text-white">
+                      <ShoppingBagIcon className="h-6 w-6" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="min-w-0">
@@ -401,8 +393,13 @@ export default async function DashboardPage() {
               {formatCurrency(recebidoHoje)}
             </p>
 
-            <div className="mt-5 h-16 rounded-3xl bg-[#F7F7F4] px-4 py-3">
-              <MiniSparkline />
+            <div className="mt-5 h-20 rounded-3xl bg-[#F7F7F4] px-4 py-2">
+              <MiniSparkline
+                orders={pedidosHoje.map((pedido) => ({
+                  createdAt: pedido.created_at,
+                  total: Number(pedido.total || 0),
+                }))}
+              />
             </div>
           </div>
 
@@ -487,7 +484,7 @@ function MetricCard({
   trend,
 }: {
   title: string;
-  value: string;
+  value: number;
   description: string;
   icon: React.ElementType;
   trend?: string;
@@ -499,7 +496,7 @@ function MetricCard({
           <p className="text-sm font-semibold text-zinc-500">{title}</p>
 
           <p className="mt-3 truncate text-3xl font-bold tracking-tight text-zinc-950">
-            {value}
+            <AnimatedCurrency value={value} />
           </p>
 
           <p className="mt-3 text-xs font-normal text-zinc-400">
@@ -545,104 +542,63 @@ function MiniStat({
   );
 }
 
-function SalesChart({ amount }: { amount: number }) {
-  const label = amount > 0 ? formatCurrency(amount) : 'R$ 0,00';
+function MiniSparkline({
+  orders,
+}: {
+  orders: { createdAt: string; total: number }[];
+}) {
+  const salesByHour = Array.from({ length: 24 }, () => 0);
+
+  orders.forEach((order) => {
+    const hour = Number(
+      new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Fortaleza',
+        hour: '2-digit',
+        hourCycle: 'h23',
+      }).format(new Date(order.createdAt)),
+    );
+
+    if (Number.isInteger(hour) && hour >= 0 && hour < 24) {
+      salesByHour[hour] += order.total;
+    }
+  });
+
+  const highestSale = Math.max(...salesByHour);
+  const points = salesByHour.map((sale, hour) => ({
+    x: 5 + (hour / 23) * 210,
+    y: highestSale > 0 ? 39 - (sale / highestSale) * 28 : 28,
+  }));
+  const path =
+    highestSale === 0
+      ? 'M5 28 H215'
+      : points.reduce(
+          (value, point, index) => {
+            if (index === 0) return `M${point.x} ${point.y}`;
+            const previousPoint = points[index - 1];
+            const midpointX = (previousPoint.x + point.x) / 2;
+            const midpointY = (previousPoint.y + point.y) / 2;
+
+            return `${value} Q${previousPoint.x} ${previousPoint.y} ${midpointX} ${midpointY}`;
+          },
+          '',
+        ) + ` L${points[23].x} ${points[23].y}`;
 
   return (
-    <div className="mt-5 overflow-hidden rounded-3xl bg-white">
-      <svg
-        viewBox="0 0 760 260"
-        className="h-[260px] w-full"
-        role="img"
-        aria-label="Gráfico de vendas"
-      >
-        <defs>
-          <linearGradient id="salesFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#CFC7FF" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#CFC7FF" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {[40, 90, 140, 190, 240].map((y) => (
-          <line
-            key={y}
-            x1="0"
-            x2="760"
-            y1={y}
-            y2={y}
-            stroke="#E4E4E7"
-            strokeDasharray="6 8"
-          />
-        ))}
-
-        <path
-          d="M20 205 C55 190, 70 130, 105 142 C140 154, 145 70, 185 75 C230 81, 205 182, 260 176 C315 170, 300 55, 350 58 C400 61, 370 185, 430 170 C480 158, 470 112, 510 122 C550 132, 530 200, 590 185 C645 171, 625 86, 675 95 C710 101, 705 70, 740 76"
-          fill="none"
-          stroke="#18181B"
-          strokeWidth="4"
-          strokeLinecap="round"
-        />
-
-        <path
-          d="M20 205 C55 190, 70 130, 105 142 C140 154, 145 70, 185 75 C230 81, 205 182, 260 176 C315 170, 300 55, 350 58 C400 61, 370 185, 430 170 C480 158, 470 112, 510 122 C550 132, 530 200, 590 185 C645 171, 625 86, 675 95 C710 101, 705 70, 740 76 L740 250 L20 250 Z"
-          fill="url(#salesFill)"
-        />
-
-        <g>
-          <line
-            x1="430"
-            x2="430"
-            y1="120"
-            y2="235"
-            stroke="#A1A1AA"
-            strokeDasharray="6 6"
-          />
-
-          <circle cx="430" cy="170" r="7" fill="#18181B" />
-
-          <rect x="392" y="96" width="98" height="34" rx="17" fill="#CFC7FF" />
-
-          <text
-            x="441"
-            y="118"
-            textAnchor="middle"
-            fontSize="13"
-            fontWeight="800"
-            fill="#18181B"
-          >
-            {label}
-          </text>
-        </g>
-
-        {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out'].map(
-          (month, index) => (
-            <text
-              key={month}
-              x={40 + index * 75}
-              y="252"
-              fontSize="12"
-              fontWeight="700"
-              fill="#A1A1AA"
-            >
-              {month}
-            </text>
-          ),
-        )}
-      </svg>
-    </div>
-  );
-}
-
-function MiniSparkline() {
-  return (
-    <svg viewBox="0 0 220 48" className="h-full w-full" aria-hidden="true">
+    <svg viewBox="0 0 220 58" className="h-full w-full" aria-label="Vendas por hora de hoje">
       <path
-        d="M5 34 C24 18, 35 30, 48 24 C65 17, 72 39, 92 30 C111 21, 116 16, 134 22 C154 30, 158 8, 178 14 C195 19, 199 33, 215 24"
+        d={path}
         fill="none"
         stroke="#18181B"
         strokeWidth="4"
         strokeLinecap="round"
       />
+
+      <text x="5" y="55" fontSize="10" fontWeight="700" fill="#A1A1AA">
+        00:00
+      </text>
+      <text x="215" y="55" textAnchor="end" fontSize="10" fontWeight="700" fill="#A1A1AA">
+        23:00
+      </text>
     </svg>
   );
 }

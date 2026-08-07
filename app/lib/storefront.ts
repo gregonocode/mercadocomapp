@@ -14,6 +14,8 @@ export type StorefrontMarket = {
   cep: string | null;
   cidade: string | null;
   estado: string | null;
+  pedido_minimo: number | null;
+  taxa_entrega: number | null;
 };
 
 export type StorefrontCategory = {
@@ -46,7 +48,7 @@ export const getMarketBySlug = cache(async (slug: string) => {
   const { data, error } = await supabase
     .from('mercados')
     .select(
-      'id, nome, slug, descricao, logo_url, cor_primaria, banner_url, cep, cidade, estado',
+      'id, nome, slug, descricao, logo_url, cor_primaria, banner_url, cep, cidade, estado, pedido_minimo, taxa_entrega',
     )
     .eq('slug', slug)
     .eq('ativo', true)
@@ -56,7 +58,14 @@ export const getMarketBySlug = cache(async (slug: string) => {
     throw new Error(`Não foi possível carregar o mercado: ${error.message}`);
   }
 
-  return data as StorefrontMarket | null;
+  if (!data) return null;
+
+  return {
+    ...data,
+    pedido_minimo:
+      data.pedido_minimo === null ? null : Number(data.pedido_minimo),
+    taxa_entrega: data.taxa_entrega === null ? null : Number(data.taxa_entrega),
+  } as StorefrontMarket;
 });
 
 export async function getStorefrontHome(market: StorefrontMarket) {

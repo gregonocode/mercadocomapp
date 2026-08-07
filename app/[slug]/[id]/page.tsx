@@ -53,6 +53,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       slug={market.slug}
       nomeCategoria={category.nome}
       nomeMercado={market.nome}
+      pedidoMinimo={market.pedido_minimo}
+      taxaEntrega={market.taxa_entrega}
       produtos={categoryProducts}
     />
   );

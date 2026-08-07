@@ -1,6 +1,11 @@
 -- Cria pedidos públicos de forma atômica. Os valores dos produtos e do frete
 -- são sempre recalculados no banco; nenhum total enviado pelo cliente é usado.
 
+alter table public.pedidos
+  add column if not exists endereco_latitude double precision,
+  add column if not exists endereco_longitude double precision,
+  add column if not exists localizacao_capturada_em timestamptz;
+
 do $$
 begin
   if not exists (
@@ -183,6 +188,9 @@ begin
     endereco_estado,
     endereco_complemento,
     endereco_referencia,
+    endereco_latitude,
+    endereco_longitude,
+    localizacao_capturada_em,
     observacao
   )
   values (
@@ -205,6 +213,21 @@ begin
     nullif(trim(p_endereco ->> 'estado'), ''),
     nullif(trim(p_endereco ->> 'complemento'), ''),
     nullif(trim(p_endereco ->> 'referencia'), ''),
+    case
+      when p_endereco ->> 'latitude' ~ '^-?[0-9]+(\.[0-9]+)?$'
+        then (p_endereco ->> 'latitude')::double precision
+      else null
+    end,
+    case
+      when p_endereco ->> 'longitude' ~ '^-?[0-9]+(\.[0-9]+)?$'
+        then (p_endereco ->> 'longitude')::double precision
+      else null
+    end,
+    case
+      when nullif(trim(p_endereco ->> 'localizacao_capturada_em'), '') is not null
+        then (p_endereco ->> 'localizacao_capturada_em')::timestamptz
+      else null
+    end,
     nullif(trim(p_observacao), '')
   )
   returning id, numero_pedido into v_pedido_id, v_numero_pedido;

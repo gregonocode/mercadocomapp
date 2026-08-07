@@ -11,6 +11,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { getMarketBySlug, getStorefrontHome } from '@/app/lib/storefront';
+import FloatingCartSummary from '@/app/components/storefront/floating-cart-summary';
 
 type PageProps = {
   params: Promise<{
@@ -330,6 +331,12 @@ export default async function LojaPage({
           )}
         </section>
       </div>
+
+      <FloatingCartSummary
+        slug={market.slug}
+        pedidoMinimo={market.pedido_minimo}
+        taxaEntrega={market.taxa_entrega}
+      />
 
       {/* Navegação inferior */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(0,0,0,0.05)] backdrop-blur-xl">
