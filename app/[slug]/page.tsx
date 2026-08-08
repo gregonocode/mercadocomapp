@@ -1,3 +1,4 @@
+//app\[slug]\page.tsx
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -347,10 +348,14 @@ export default async function LojaPage({
             active
           />
 
-          <BottomNavigationButton
-            label="Conta"
-            icon={<UserRound className="h-6 w-6" />}
-          />
+          <Link
+            href={`/${market.slug}/conta`}
+            aria-label="Conta"
+            className="relative flex flex-col items-center justify-center gap-1 text-zinc-500 transition active:scale-95"
+          >
+            <UserRound className="h-6 w-6" />
+            <span className="sr-only">Conta</span>
+          </Link>
 
           <BottomNavigationButton
             label="Benefícios"

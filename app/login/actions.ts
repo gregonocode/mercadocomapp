@@ -33,6 +33,18 @@ export async function loginWithPassword({
       };
     }
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user?.user_metadata?.role === 'cliente') {
+      await supabase.auth.signOut();
+      return {
+        ok: false,
+        error: 'Esta conta é de cliente e não tem acesso ao painel do mercado.',
+      };
+    }
+
     return { ok: true };
   } catch (error) {
     return {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { QrCodeIcon } from '@heroicons/react/24/outline';
+import { QrCodeIcon, TruckIcon } from '@heroicons/react/24/outline';
 import { FaCreditCard, FaMoneyBillWave } from 'react-icons/fa';
 import { FiMapPin, FiPhone } from 'react-icons/fi';
 import { SiPix } from 'react-icons/si';
@@ -177,9 +177,20 @@ export default function PedidoDetailsClient({
             type="button"
             onClick={update}
             disabled={loading}
-            className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
+            className={`rounded-full px-5 py-3 text-sm font-bold text-white disabled:opacity-50 ${
+              action[0] === 'saiu_para_entrega' ? 'bg-[#575BF8]' : 'bg-zinc-950'
+            }`}
           >
-            {loading ? 'Salvando...' : action[1]}
+            {loading ? (
+              'Salvando...'
+            ) : (
+              <span className="flex items-center gap-2">
+                {action[0] === 'saiu_para_entrega' && (
+                  <TruckIcon className="h-5 w-5" aria-hidden="true" />
+                )}
+                {action[1]}
+              </span>
+            )}
           </button>
         )}
       </header>

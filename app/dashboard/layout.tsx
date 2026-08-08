@@ -49,6 +49,10 @@ export default async function DashboardLayout({
     .eq('proprietario_id', user.id)
     .maybeSingle();
 
+  if (!market) {
+    redirect('/login');
+  }
+
   return (
     <div className="min-h-screen bg-[#F7F7F4] text-zinc-950">
       <SystemPwaRegistrar />

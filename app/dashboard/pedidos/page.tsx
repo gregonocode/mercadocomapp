@@ -1,8 +1,12 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { connection } from 'next/server';
 import { createClient } from '@/app/lib/supabase/server';
+import ConcluirPedidosEnviadosButton from './concluir-pedidos-enviados-button';
 
 const ORDERS_PER_PAGE = 10;
+const orderFilters = ['todos', 'pendentes', 'aceitos', 'enviados', 'concluidos'] as const;
+type OrderFilter = (typeof orderFilters)[number];
 
 const labels: Record<string, string> = {
   pendente: 'Pendente',
@@ -22,9 +26,11 @@ type PedidosPageProps = {
 };
 
 export default async function PedidosPage({ searchParams }: PedidosPageProps) {
+  await connection();
   const supabase = await createClient();
   const filters = await searchParams;
-  const status = getSingleParam(filters.status);
+  const requestedStatus = getOrderFilter(getSingleParam(filters.status));
+  let status: OrderFilter = requestedStatus ?? 'todos';
   const requestedPage = Number.parseInt(getSingleParam(filters.pagina), 10);
   const currentPage =
     Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
@@ -45,6 +51,18 @@ export default async function PedidosPage({ searchParams }: PedidosPageProps) {
 
   if (!loja) redirect('/dashboard/configuracoes');
 
+  if (!requestedStatus) {
+    const { count: pendingOrderCount, error: pendingOrdersError } =
+      await supabase
+        .from('pedidos')
+        .select('id', { count: 'exact', head: true })
+        .eq('mercado_id', loja.id)
+        .eq('status', 'pendente');
+
+    if (pendingOrdersError) throw pendingOrdersError;
+    if ((pendingOrderCount ?? 0) > 0) status = 'pendentes';
+  }
+
   let query = supabase
     .from('pedidos')
     .select(
@@ -55,11 +73,20 @@ export default async function PedidosPage({ searchParams }: PedidosPageProps) {
     .order('created_at', { ascending: false })
     .range(rangeStart, rangeEnd);
 
-  if (status === 'pendentes') query = query.eq('status', 'pendente');
-  if (status === 'aceitos') {
-    query = query.in('status', ['confirmado', 'em_separacao', 'pronto']);
+  switch (status) {
+    case 'pendentes':
+      query = query.eq('status', 'pendente');
+      break;
+    case 'aceitos':
+      query = query.in('status', ['confirmado', 'em_separacao', 'pronto']);
+      break;
+    case 'enviados':
+      query = query.eq('status', 'saiu_para_entrega');
+      break;
+    case 'concluidos':
+      query = query.eq('status', 'entregue');
+      break;
   }
-  if (status === 'enviados') query = query.eq('status', 'saiu_para_entrega');
 
   const { data: pedidos, count: orderCount, error } = await query;
 
@@ -83,16 +110,17 @@ export default async function PedidosPage({ searchParams }: PedidosPageProps) {
 
       <nav className="flex flex-wrap gap-2">
         {[
-          ['', 'Todos'],
+          ['todos', 'Todos'],
           ['pendentes', 'Pendentes'],
           ['aceitos', 'Aceitos'],
           ['enviados', 'Enviados'],
+          ['concluidos', 'Concluídos'],
         ].map(([value, label]) => (
           <Link
             key={value}
             href={getOrdersHref(1, value)}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              status === value || (!status && !value)
+              status === value
                 ? 'bg-zinc-950 text-white'
                 : 'bg-white text-zinc-600 ring-1 ring-zinc-200'
             }`}
@@ -101,6 +129,14 @@ export default async function PedidosPage({ searchParams }: PedidosPageProps) {
           </Link>
         ))}
       </nav>
+
+      {status === 'enviados' && (pedidos?.length ?? 0) > 1 && (
+        <ConcluirPedidosEnviadosButton orderCount={totalOrders} />
+      )}
+
+      {status === 'aceitos' && (pedidos?.length ?? 0) > 1 && (
+        <ConcluirPedidosEnviadosButton orderCount={totalOrders} action="enviar" />
+      )}
 
       <section className="overflow-hidden rounded-3xl border border-zinc-200 bg-white">
         {pedidos?.length ? (
@@ -169,10 +205,16 @@ function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] || '' : value || '';
 }
 
+function getOrderFilter(value: string): OrderFilter | null {
+  return orderFilters.includes(value as (typeof orderFilters)[number])
+    ? (value as OrderFilter)
+    : null;
+}
+
 function getOrdersHref(page: number, status: string) {
   const params = new URLSearchParams();
 
-  if (status) params.set('status', status);
+  params.set('status', status);
   if (page > 1) params.set('pagina', String(page));
 
   const query = params.toString();
